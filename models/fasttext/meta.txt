@@ -1,0 +1,4 @@
+vector_size 50
+vocab_size 62
+label_size 39
+threshold 0.000000
