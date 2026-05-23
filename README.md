@@ -2,18 +2,18 @@
 
 A lightning-fast, lightweight bookmark manager with AI-powered auto-categorization, built with Go + TypeScript + SQLite.
 
-## ✨ Features
+## Features
 
-- **🚀 Blazingly Fast**: Single Go binary with embedded frontend
-- **🪶 Ultra Lightweight**: <50MB RAM usage, minimal resource footprint  
-- **🔍 Full-Text Search**: Powered by SQLite FTS5 with ranked results
-- **🏷️ Smart Tagging**: Interactive tag cloud with auto-categorization
-- **🎨 Cyberpunk UI**: Futuristic design with neon effects
-- **⚡ Real-Time**: Instant search and updates
-- **🐳 Container Ready**: Docker & Kubernetes deployment configs
-- **🤖 AI Ready**: Learning system for intelligent categorization
+- **Blazingly Fast**: Single Go binary with embedded frontend
+- **Ultra Lightweight**: <50MB RAM usage, minimal resource footprint
+- **Full-Text Search**: Powered by SQLite FTS5 with ranked results
+- **Smart Tagging**: Interactive tag cloud with auto-categorization
+- **Cyberpunk UI**: Futuristic design with neon effects
+- **Real-Time**: Instant search and updates
+- **Container Ready**: Docker & Kubernetes deployment configs
+- **AI Ready**: Learning system for intelligent categorization
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development
 
@@ -46,7 +46,7 @@ docker-compose up -d
 kubectl apply -f k8s.yaml
 ```
 
-## 📖 API Documentation
+## API Documentation
 
 ### Bookmarks
 
@@ -71,7 +71,7 @@ kubectl apply -f k8s.yaml
 - `GET /api/health` - Health check
 - `GET /api/stats` - Database statistics
 
-## 🏗️ Architecture
+## Architecture
 
 - **Backend**: Go 1.25 (standard library only)
 - **Database**: SQLite with FTS5, WAL mode
@@ -80,7 +80,7 @@ kubectl apply -f k8s.yaml
 - **Tags**: Many-to-many with weighted tag cloud
 - **Deployment**: Single binary with embedded assets
 
-## 🎯 Performance
+## Performance
 
 - **Binary Size**: 12MB (with embedded frontend + AI)
 - **Memory Usage**: <50MB RAM
@@ -88,7 +88,7 @@ kubectl apply -f k8s.yaml
 - **Search Latency**: <10ms for 10k+ bookmarks
 - **Database**: SQLite with FTS5 indexing
 
-## 🛠️ Development
+## Development
 
 ```bash
 # Frontend development
@@ -96,14 +96,14 @@ cd web
 pnpm install
 pnpm run dev
 
-# Backend development  
+# Backend development
 go run main.go
 
 # Build optimized
 ./build.sh
 ```
 
-## 📦 Deployment Options
+## Deployment Options
 
 ### Single Binary Deployment
 
@@ -162,7 +162,7 @@ docker-compose -f docker-compose.prod.yml up -d
 - [ ] Monitor health endpoint at `/api/health`
 - [ ] Set appropriate `LOG_LEVEL` (WARN for production)
 
-## 🤖 AI Categorization
+## AI Categorization
 
 Three-layer AI system for intelligent bookmark categorization:
 
@@ -181,13 +181,13 @@ mkdir -p ./models/fasttext ./models/onnx
 
 # Check AI predictive analysis
 curl -X POST http://localhost:8080/api/ai/predict-tags \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://github.com","title":"GitHub","description":"Code repository"}'
+ -H "Content-Type: application/json" \
+ -d '{"url":"https://github.com","title":"GitHub","description":"Code repository"}'
 
-# Find duplicate bookmarks  
+# Find duplicate bookmarks
 curl -X POST http://localhost:8080/api/ai/duplicates/check \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://github.com/golang/go","title":"Go Programming"}'
+ -H "Content-Type: application/json" \
+ -d '{"url":"https://github.com/golang/go","title":"Go Programming"}'
 ```
 
 ### AI API Endpoints
@@ -199,12 +199,12 @@ curl -X POST http://localhost:8080/api/ai/duplicates/check \
 - `POST /api/ai/cluster/analyze` - Analyze clustering potential
 - `POST /api/ai/predict/learn` - Submit learning feedback
 
-**📖 Full AI Setup Guide**: See [AI_SETUP.md](AI_SETUP.md) for detailed model installation and configuration.
+**Full AI Setup Guide**: See [AI_SETUP.md](AI_SETUP.md) for detailed model installation and configuration.
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details.
 
 ---
 
-Built with ❤️ in Go and TypeScript
+Built with Go and TypeScript

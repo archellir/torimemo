@@ -1,27 +1,27 @@
 # AI Model Setup Guide
 
-## 🤖 3-Layer AI Architecture
+## 3-Layer AI Architecture
 
 The AI system uses a 3-layer approach:
 1. **Layer 1**: Rule-based (always active)
 2. **Layer 2**: FastText lightweight ML
 3. **Layer 3**: ONNX advanced content understanding
 
-## 📁 Model Directory Structure
+## Model Directory Structure
 
 ```
 ./models/
 ├── fasttext/
-│   ├── model.bin          # FastText model file
-│   ├── labels.txt         # Category labels
-│   └── vocab.txt          # Vocabulary file
+│ ├── model.bin # FastText model file
+│ ├── labels.txt # Category labels
+│ └── vocab.txt # Vocabulary file
 └── onnx/
-    ├── sentiment.onnx     # Sentiment analysis model
-    ├── topic.onnx         # Topic classification model
-    └── quality.onnx       # Content quality model
+ ├── sentiment.onnx # Sentiment analysis model
+ ├── topic.onnx # Topic classification model
+ └── quality.onnx # Content quality model
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Create Model Directories
 ```bash
@@ -43,12 +43,12 @@ export AI_LAYER3_ENABLED="true"
 ```
 
 The AI system will:
-- ✅ Always use Layer 1 (rule-based)
-- ⚠️ Use Layer 2 if FastText models found
-- ⚠️ Use Layer 3 if ONNX models found
-- 🔄 Fallback to rule-based if models missing
+- Always use Layer 1 (rule-based)
+- Use Layer 2 if FastText models found
+- Use Layer 3 if ONNX models found
+- Fallback to rule-based if models missing
 
-## 📥 Model Sources
+## Model Sources
 
 ### FastText Models
 Download pre-trained models:
@@ -68,11 +68,11 @@ pip install transformers onnx
 # Export sentiment model
 python -m transformers.onnx --model=cardiffnlp/twitter-roberta-base-sentiment-latest ./models/onnx/sentiment/
 
-# Export topic model  
+# Export topic model
 python -m transformers.onnx --model=facebook/bart-large-mnli ./models/onnx/topic/
 ```
 
-## 🔧 API Endpoints
+## API Endpoints
 
 Test AI functionality:
 
@@ -82,8 +82,8 @@ curl http://localhost:8080/api/ai/status
 
 # Get tag suggestions
 curl -X POST http://localhost:8080/api/ai/categorize \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com","title":"Example","description":"Test"}'
+ -H "Content-Type: application/json" \
+ -d '{"url":"https://example.com","title":"Example","description":"Test"}'
 
 # Find duplicates
 curl http://localhost:8080/api/ai/duplicates/123
@@ -95,7 +95,7 @@ curl http://localhost:8080/api/ai/clusters
 curl http://localhost:8080/api/ai/predict/tags?user_id=1
 ```
 
-## 🔍 Debugging
+## Debugging
 
 ### Check Model Status
 ```bash
@@ -112,7 +112,7 @@ LOG_LEVEL=DEBUG ./torimemo
 - Layer 2: Check `./models/fasttext/model.bin` exists
 - Layer 3: Check `./models/onnx/*.onnx` exist
 
-## 📊 Performance
+## Performance
 
 | Layer | Latency | Accuracy | Resource Usage |
 |-------|---------|----------|----------------|
@@ -120,7 +120,7 @@ LOG_LEVEL=DEBUG ./torimemo
 | 2 (FastText) | ~10ms | 85% | Low |
 | 3 (ONNX) | ~100ms | 95% | Moderate |
 
-## 🎯 Production Tips
+## Production Tips
 
 1. **Start with Layer 1**: Always works, good baseline
 2. **Add Layer 2**: Significant accuracy boost, low overhead
@@ -128,7 +128,7 @@ LOG_LEVEL=DEBUG ./torimemo
 4. **Monitor**: Use `/api/ai/status` for health checks
 5. **Fallbacks**: System gracefully degrades if models fail
 
-## 🛠️ Custom Models
+## Custom Models
 
 ### Training FastText
 ```bash
@@ -150,7 +150,7 @@ model = AutoModel.from_pretrained("your-model")
 torch.onnx.export(model, inputs, "model.onnx")
 ```
 
-## 📝 Configuration
+## Configuration
 
 Default settings in `internal/ai/categorizer.go`:
 - FastText confidence threshold: 0.7
