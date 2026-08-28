@@ -1,0 +1,23 @@
+[package]
+name = "torimemo-enrich"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Offline metadata fetch and model-backed labelling for torimemo"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+
+[dependencies]
+torimemo-core.workspace = true
+chrono.workspace = true
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "gzip", "charset", "http2", "stream", "blocking", "json"] }
+scraper = "0.27.0"
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "time", "sync"] }
