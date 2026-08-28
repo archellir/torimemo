@@ -1,0 +1,6 @@
+# Wider than the 100-column default: this codebase leans on long, explanatory
+# identifiers, and at 100 columns rustfmt breaks them across lines in ways that
+# read worse than the single line would.
+max_width = 100
+use_small_heuristics = "Max"
+edition = "2024"
