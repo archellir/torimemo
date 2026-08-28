@@ -1,0 +1,32 @@
+[package]
+name = "torimemo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command line interface for torimemo"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "torimemo"
+path = "src/main.rs"
+
+[features]
+default = ["local-embeddings"]
+# Local ONNX embeddings. Off, the CLI still runs with the deterministic
+# provider, which is what CI uses.
+local-embeddings = ["torimemo-embed/local", "torimemo-api/local-embeddings"]
+metal = ["torimemo-embed/metal"]
+
+[dependencies]
+torimemo-core.workspace = true
+torimemo-embed.workspace = true
+torimemo-classify.workspace = true
+torimemo-enrich = { path = "../enrich" }
+torimemo-api = { path = "../api", default-features = false }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+chrono.workspace = true
+clap.workspace = true
