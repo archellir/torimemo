@@ -1,0 +1,40 @@
+[package]
+name = "torimemo-embed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Local text embeddings and vector recall for torimemo"
+
+[lints]
+workspace = true
+
+[features]
+default = ["local"]
+# In-process ONNX embeddings via fastembed. Disabling it drops the ONNX
+# runtime and the model download, leaving the deterministic provider — which
+# is what CI and the core's own tests run against, so the test suite never
+# needs a model on disk or a network.
+local = ["dep:fastembed"]
+# Metal acceleration, worth having on Apple silicon and inert elsewhere.
+metal = ["fastembed?/metal"]
+
+[dev-dependencies]
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+torimemo-core.workspace = true
+
+[[bench]]
+name = "recall"
+harness = false
+
+[dependencies]
+torimemo-core.workspace = true
+blake3.workspace = true
+# rustls throughout, matching `enrich` and `capture`: the native-tls variants
+# link system OpenSSL, which would make the build depend on a shared library
+# being present and correct in every image and on every developer's machine.
+fastembed = { version = "6.0.1", optional = true, default-features = false, features = [
+    "ort-download-binaries-rustls-tls",
+    "hf-hub-rustls-tls",
+] }
