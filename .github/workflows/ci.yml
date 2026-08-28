@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # A warning that only appears in CI is a warning nobody reads.
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins the version and components, so CI runs
+      # exactly the toolchain contributors have locally.
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --check
+
+      # `--no-default-features` swaps the ONNX model for the deterministic
+      # provider, so the suite needs no model download and no network. That is
+      # a property worth keeping: a test run that reaches the internet is a
+      # test run that fails for reasons unrelated to the code.
+      - name: Tests
+        run: cargo test --workspace --no-default-features
+
+      - name: Doc tests
+        run: cargo test --workspace --no-default-features --doc
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+
+      # Both feature combinations are linted: the slim build is what CI runs,
+      # so without this the default build's code could rot unnoticed, and vice
+      # versa.
+      - name: Lint without local embeddings
+        run: cargo clippy --workspace --all-targets --no-default-features -- -D warnings
+
+      - name: Lint with default features
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  boundary:
+    name: Architecture boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+
+      # The rule this project is built around: the serving path holds no LLM
+      # client and opens no outbound connection. Cargo's dependency graph is
+      # the enforcement, and this is what notices if someone adds an edge.
+      - name: The serving path cannot reach the network
+        run: ./scripts/check-boundary.sh
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Outranks rust-toolchain.toml, so this really does build on the MSRV.
+    env:
+      RUSTUP_TOOLCHAIN: "1.90"
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cargo.toml advertises rust-version 1.90, so it has to keep building
+      # there; nothing else in CI would notice a newly stabilised API landing
+      # in the codebase.
+      - uses: dtolnay/rust-toolchain@1.90
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build against the declared MSRV
+        run: cargo check --workspace --all-targets --no-default-features
+
+  bench:
+    name: Benchmarks compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+
+      # Compiled, not run: benchmark *timings* on a shared runner are noise,
+      # but a benchmark that stops compiling is a benchmark nobody notices is
+      # gone. Run `cargo bench` locally when the scan changes.
+      - name: Benchmarks still build
+        run: cargo bench -p torimemo-embed --no-default-features --no-run
+
+  audit:
+    name: Advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
