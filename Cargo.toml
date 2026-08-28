@@ -1,0 +1,63 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/core",
+    "crates/cli",
+    "crates/embed",
+    "crates/classify",
+    "crates/api",
+    "crates/enrich",
+#    "crates/capture",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+license = "AGPL-3.0-only"
+repository = "https://github.com/arcbjorn/torimemo"
+
+# The architectural rule of this workspace: `core`, `embed`, and `api` form the
+# serving path and never depend on a model SDK or a network LLM client. Only
+# `enrich` may, and nothing in the serving path lists it as a dependency — so
+# the boundary akunaki enforces in CI is a compile error here instead.
+[workspace.dependencies]
+torimemo-core = { path = "crates/core" }
+torimemo-embed = { path = "crates/embed", default-features = false }
+torimemo-classify = { path = "crates/classify" }
+
+blake3 = "1.8.7"
+getrandom = "0.4.3"
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock", "serde"] }
+clap = { version = "4.6.6", features = ["derive", "env"] }
+rusqlite = { version = "0.40.2", features = ["bundled", "chrono"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+url = "2.5.8"
+
+[workspace.lints.rust]
+# Nothing here needs raw memory access; make that a compile error rather than
+# a convention, so it stays true.
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+bool_to_int_with_if = "warn"
+doc_markdown = "warn"
+explicit_iter_loop = "warn"
+implicit_clone = "warn"
+manual_let_else = "warn"
+map_unwrap_or = "warn"
+match_same_arms = "warn"
+redundant_closure_for_method_calls = "warn"
+redundant_else = "warn"
+semicolon_if_nothing_returned = "warn"
+uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"
