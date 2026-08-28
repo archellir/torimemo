@@ -1,0 +1,5 @@
+# Pinning the toolchain keeps CI on exactly what contributors run locally, so
+# a lint that passes here cannot fail there on a newer clippy.
+[toolchain]
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]
