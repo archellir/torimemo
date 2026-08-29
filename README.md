@@ -1,5 +1,7 @@
 # とりメモ (Torimemo)
 
+Agentic, lightning-fast, lightweight AI bookmark manager with FastText classification & ONNX context comprehension.
+
 Local-first bookmark capture and recall. One SQLite file, one binary, no
 network at query time.
 
