@@ -53,6 +53,23 @@ const TRACKING_PARAMS: &[&str] = &[
     "afref",
     "af",
     "terminal_id",
+    // Affiliate referral tags. `tag` is Amazon's associate id and
+    // `geniuslink` marks a link rewritten by a monetisation service — both
+    // credit someone else for the click and identify the resource not at all.
+    // This corpus held two Amazon links carrying a stranger's associate id.
+    "tag",
+    "geniuslink",
+    "linkcode",
+    "creative",
+    "creativeasin",
+    "ascsubtag",
+    "linkid",
+    // Amazon's own display and search-context noise: which listing variant,
+    // which search produced the click, which position in the results.
+    "psc",
+    "th",
+    "qid",
+    "sr",
     "cn",
     "cv",
     "dp",
@@ -259,6 +276,18 @@ mod tests {
         let raw = "https://aliexpress.ru/item/4000344862592.html?spm=a2g0o.productlist.0.0.3ecb2c6\
                    &algo_pvid=6099bb1e&algo_expid=6099bb1e-0&btsid=0b8b036d&ws_ab_test=searchweb0_0";
         assert_eq!(canonical(raw), "https://aliexpress.ru/item/4000344862592.html");
+    }
+
+    #[test]
+    fn strips_amazon_affiliate_tags() {
+        // From the real corpus: an Amazon link carrying someone else's
+        // associate id, rewritten by a monetisation service.
+        assert_eq!(
+            canonical(
+                "https://www.amazon.com/dp/B0721MQ6TL?geniuslink=true&psc=1&tag=benjami0f-20&th=1"
+            ),
+            "https://www.amazon.com/dp/B0721MQ6TL"
+        );
     }
 
     #[test]
