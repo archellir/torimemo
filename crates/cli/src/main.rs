@@ -62,6 +62,24 @@ enum Command {
         /// The exported HTML file.
         path: PathBuf,
     },
+    /// Import a GitHub user's starred repositories.
+    ///
+    /// Stars are maintained where you press the button, so re-running this
+    /// picks up everything starred since last time.
+    ImportStars {
+        /// Whose stars to import.
+        user: String,
+        /// A personal access token. Unauthenticated requests are limited to
+        /// 60 per hour; a token raises that to 5000.
+        #[arg(long, env = "GITHUB_TOKEN")]
+        token: Option<String>,
+        /// Include repositories the owner has archived.
+        #[arg(long)]
+        include_archived: bool,
+        /// Include forks.
+        #[arg(long)]
+        include_forks: bool,
+    },
     /// Add a single link.
     Add {
         /// The URL to capture.
@@ -214,6 +232,49 @@ fn run(cli: &Cli) -> Result<()> {
     match &cli.command {
         Command::ImportVault { path } => import_vault(&mut store, path),
         Command::ImportBrowser { path } => import_browser(&mut store, path),
+        Command::ImportStars { user, token, include_archived, include_forks } => {
+            let config = torimemo_enrich::stars::Config {
+                user: user.clone(),
+                token: token.clone(),
+                skip_archived: !include_archived,
+                skip_forks: !include_forks,
+            };
+
+            let runtime = tokio::runtime::Runtime::new()?;
+            let (captures, mut summary) =
+                runtime.block_on(torimemo_enrich::stars::fetch(&config))?;
+
+            println!("{} stars, {} skipped", summary.fetched, summary.skipped);
+
+            let outcome = store.ingest_batch(&captures)?;
+            summary.created = outcome.created;
+            summary.merged = outcome.merged;
+
+            // GitHub already told us what each repository is, so seed the
+            // bookmark's title and description from the star rather than
+            // making the enrichment pass fetch a page to learn the same thing.
+            // Only where nothing is set: a title the user or a fetch produced
+            // is better evidence than the API's summary.
+            for capture in &captures {
+                let Some(context) = &capture.context else { continue };
+                let Some(bookmark) = store.bookmark_by_url(&capture.raw_url)? else { continue };
+                if bookmark.title.is_some() {
+                    continue;
+                }
+                let (name, description) = context
+                    .split_once(" — ")
+                    .map_or((context.as_str(), None), |(name, rest)| (name, Some(rest)));
+                store.set_metadata(bookmark.id, Some(name), description)?;
+            }
+
+            println!(
+                "imported {} new, {} already known, {} unreadable",
+                summary.created,
+                summary.merged,
+                outcome.skipped.len()
+            );
+            Ok(())
+        }
         Command::Add { url, context } => {
             let mut capture = torimemo_core::NewCapture::new(url.clone(), Source::Api);
             if let Some(context) = context {

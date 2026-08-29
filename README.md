@@ -39,6 +39,7 @@ cargo build --release
 
 torimemo import-vault ~/Documents/vault/ALL\ BOOKMARKS
 torimemo import-browser ~/Downloads/bookmarks.html
+torimemo import-stars <github-user>  # starred repos; re-run to pick up new ones
 torimemo add https://example.com --context "why I saved it"
 
 torimemo enrich                      # fetch titles; resumable, per-host polite
@@ -78,6 +79,21 @@ consumer is the user's own agent on the same machine.
 | `GET /bookmarks/{id}` | a bookmark and every capture of it |
 | `POST /events` | record an interaction (the ranking signal) |
 | `GET /stats` | corpus counts |
+
+## GitHub stars
+
+Stars are a better record of "repositories I care about" than bookmarks: they
+are maintained where you press the button, they carry the repo's own
+description and language, and re-running the import picks up everything
+starred since last time. Archived repos and forks are skipped by default.
+
+The description GitHub returns seeds the bookmark's title, so an imported star
+is searchable immediately without the enrichment pass having to fetch anything
+— but only where no title is set, since a fetched or human title is better
+evidence than the API's summary.
+
+Unauthenticated requests are limited to 60 per hour; pass `--token` (or set
+`GITHUB_TOKEN`) to raise that to 5000.
 
 ## Pruning
 

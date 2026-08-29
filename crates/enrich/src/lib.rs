@@ -10,6 +10,7 @@ pub mod extract;
 pub mod fetch;
 pub mod label;
 pub mod labelrun;
+pub mod stars;
 pub mod taxonomy;
 pub mod worker;
 
