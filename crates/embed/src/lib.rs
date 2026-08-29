@@ -13,4 +13,4 @@ pub mod provider;
 pub mod recall;
 
 pub use provider::{Embedder, Embedding, Provider};
-pub use recall::{Match, backfill, cosine, embed_text, input_hash, rank_by_similarity};
+pub use recall::{Match, backfill, cosine, dot_unit, embed_text, input_hash, rank_by_similarity};

@@ -124,13 +124,21 @@ may reach an outbound HTTP client, and `api` may not reach `enrich`. It also
 asserts the inverse — that `enrich` still *does* reach the network — so the
 check cannot pass by silently testing nothing.
 
-`cargo bench -p torimemo-embed` measures the one design claim that was
-previously only asserted: brute-force cosine scans at a flat **~1.6M
-vectors/second** — 1.3ms at 2,000 bookmarks, 31ms at 50,000, linear with no
-cliff. Embedding the query costs ~1.1µs, so the scan is what matters. The
-number to add an approximate index at is roughly 100,000 bookmarks. CI compiles
-the benchmarks but does not time them: timings on a shared runner are noise,
-while a benchmark that stops compiling is one nobody notices is gone.
+`cargo bench -p torimemo-embed` measures search rather than asserting it.
+Vectors are unit-length by construction, so the hot path is a plain dot product
+across eight independent accumulators — no magnitudes to recompute, and enough
+parallel chains to use the vector unit. That scans at **~3.2M vectors/second**:
+0.6ms at 2,000 bookmarks, 3.2ms at 10,000, 17ms at 50,000, linear.
+
+An approximate index was measured against this, not assumed better. libSQL's
+`vector_top_k` is **slower** at this corpus size (1.4ms against 0.6ms), and
+where it wins at 50,000 it returned **2 of the correct top 10**. For an archive
+where a query should surface the thing you actually saved, exact wins. Revisit
+at roughly 200,000 bookmarks.
+
+CI compiles the benchmarks but does not time them: timings on a shared runner
+are noise, while a benchmark that stops compiling is one nobody notices is
+gone.
 
 URL canonicalization carries property tests (`crates/core/tests/`) on top of
 its examples, because it is the store's identity function: every dedupe

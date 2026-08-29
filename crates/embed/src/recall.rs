@@ -1,15 +1,18 @@
 //! Vector recall over the stored corpus.
 //!
 //! Brute force, deliberately — and measured rather than assumed. `cargo bench
-//! -p torimemo-embed` scans at a flat ~1.6M vectors/second, which is 1.3ms at
-//! 2,000 bookmarks and 31ms at 50,000; scaling is linear with no cliff in that
-//! range. Embedding the query itself costs ~1.1µs, so the scan dominates and
-//! is the right thing to have measured.
+//! -p torimemo-embed` scans at ~3.2M vectors/second: 0.6ms at 2,000 bookmarks,
+//! 3.2ms at 10,000, 17ms at 50,000, linear with no cliff. Embedding the query
+//! costs ~1.0µs, so the scan is what matters.
 //!
-//! An approximate index would buy back milliseconds at this size while adding
-//! a second structure to keep in sync with the store. The number to revisit
-//! this at is roughly 100,000 bookmarks, where a scan crosses 60ms and starts
-//! to be felt; nothing else has to change when it does.
+//! An approximate index was measured against this rather than assumed better.
+//! libSQL's `vector_top_k` is *slower* at this corpus size (1.4ms against
+//! 0.6ms — the index has overhead a small scan does not amortise), and where
+//! it does win at 50,000 it returned only 2 of the correct top 10. That is the
+//! trade an ANN structure makes, and for a personal archive where a query
+//! should surface the thing you actually saved, an exact 17ms beats an
+//! approximate 4ms. Revisit at roughly 200,000 bookmarks, where the scan
+//! crosses 60ms; nothing else has to change when it does.
 
 use crate::provider::Embedder;
 use torimemo_core::{Bookmark, Result, Store};
@@ -89,7 +92,9 @@ pub fn rank_by_similarity(
     let mut scored: Vec<(i64, f32)> = stored
         .into_iter()
         .filter_map(|(id, vector)| {
-            let score = cosine(&query_embedding.vector, &vector)?;
+            // `dot_unit`, not `cosine`: both sides are unit vectors by
+            // construction, and this runs once per bookmark per query.
+            let score = dot_unit(&query_embedding.vector, &vector)?;
             (score >= floor).then_some((id, score))
         })
         .collect();
@@ -113,6 +118,10 @@ pub fn rank_by_similarity(
 /// A width mismatch means two models' vectors are stored under one name, which
 /// is a bug rather than a query-time condition — skipping the row keeps a bad
 /// write from taking down every search.
+///
+/// General enough for vectors of any magnitude. The hot path uses [`dot_unit`]
+/// instead, which is a third of the arithmetic; this stays for callers that
+/// cannot promise normalized input.
 #[must_use]
 pub fn cosine(left: &[f32], right: &[f32]) -> Option<f32> {
     if left.len() != right.len() || left.is_empty() {
@@ -131,6 +140,44 @@ pub fn cosine(left: &[f32], right: &[f32]) -> Option<f32> {
 
     let denominator = (left_magnitude * right_magnitude).sqrt();
     if denominator <= f32::EPSILON { None } else { Some(dot / denominator) }
+}
+
+/// Accumulators the dot product splits across.
+///
+/// Floating-point addition is not associative, so one accumulator forces the
+/// compiler to keep every add in source order: a single dependent chain with
+/// one add in flight at a time. Eight independent chains let it use the whole
+/// vector unit, and eight saturates NEON and AVX2 without spilling registers.
+const LANES: usize = 8;
+
+/// Dot product of two **unit** vectors, which is their cosine similarity.
+///
+/// Every vector this crate stores is L2-normalized at the provider before it
+/// is written, so both magnitudes are 1 and the general [`cosine`] spends two
+/// thirds of its arithmetic recomputing that. This is the hot path — it runs
+/// once per stored bookmark on every query — so it is worth the specialisation.
+#[must_use]
+pub fn dot_unit(left: &[f32], right: &[f32]) -> Option<f32> {
+    if left.len() != right.len() || left.is_empty() {
+        return None;
+    }
+
+    let mut sums = [0.0_f32; LANES];
+    let mut left_chunks = left.chunks_exact(LANES);
+    let mut right_chunks = right.chunks_exact(LANES);
+
+    for (a, b) in left_chunks.by_ref().zip(right_chunks.by_ref()) {
+        for lane in 0..LANES {
+            sums[lane] = a[lane].mul_add(b[lane], sums[lane]);
+        }
+    }
+
+    let mut total: f32 = sums.iter().sum();
+    for (a, b) in left_chunks.remainder().iter().zip(right_chunks.remainder()) {
+        total += a * b;
+    }
+
+    Some(total)
 }
 
 /// Embeds every bookmark that has no vector for this model.
@@ -197,6 +244,45 @@ mod tests {
     #[test]
     fn cosine_of_orthogonal_vectors_is_zero() {
         assert!(cosine(&[1.0, 0.0], &[0.0, 1.0]).unwrap().abs() < 1e-6);
+    }
+
+    #[test]
+    fn dot_unit_agrees_with_cosine_on_unit_vectors() {
+        // The specialisation is only valid because stored vectors are
+        // normalized; this pins that equivalence.
+        let mut left = vec![0.0_f32; 384];
+        let mut right = vec![0.0_f32; 384];
+        for index in 0..384 {
+            left[index] = ((index % 7) as f32) - 3.0;
+            right[index] = ((index % 11) as f32) - 5.0;
+        }
+        for vector in [&mut left, &mut right] {
+            let magnitude = vector.iter().map(|value| value * value).sum::<f32>().sqrt();
+            for value in vector.iter_mut() {
+                *value /= magnitude;
+            }
+        }
+
+        let exact = cosine(&left, &right).unwrap();
+        let fast = dot_unit(&left, &right).unwrap();
+        assert!((exact - fast).abs() < 1e-5, "cosine {exact} vs dot_unit {fast}");
+    }
+
+    #[test]
+    fn dot_unit_handles_widths_that_are_not_a_multiple_of_the_lane_count() {
+        // 384 divides by 8, but another model's width might not; the
+        // remainder loop has to be right.
+        for width in [1_usize, 7, 8, 9, 15, 384, 385] {
+            let unit = vec![1.0_f32 / (width as f32).sqrt(); width];
+            let similarity = dot_unit(&unit, &unit).unwrap();
+            assert!((similarity - 1.0).abs() < 1e-4, "width {width} gave {similarity}");
+        }
+    }
+
+    #[test]
+    fn dot_unit_rejects_mismatched_widths() {
+        assert_eq!(dot_unit(&[1.0, 0.0], &[1.0]), None);
+        assert_eq!(dot_unit(&[], &[]), None);
     }
 
     #[test]
