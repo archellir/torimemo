@@ -556,6 +556,65 @@ impl Store {
         Ok(())
     }
 
+    /// Every bookmark paired with what enrichment found, for classification.
+    ///
+    /// Returns the fetch status alongside the bookmark because the rules need
+    /// both: a page that 404s and a page that yielded no title are different
+    /// facts, and only the fetch record distinguishes them.
+    pub fn all_with_fetch_status(&self) -> Result<Vec<(Bookmark, Option<String>)>> {
+        let mut statement = self.connection.prepare(
+            "SELECT b.id, b.canonical_url, b.domain, b.title, b.description,
+                    b.first_captured_at, b.last_captured_at, b.capture_count, f.status
+               FROM bookmarks b
+               LEFT JOIN fetch_state f ON f.bookmark_id = b.id
+              ORDER BY b.id",
+        )?;
+        let rows = statement
+            .query_map([], |row| Ok((bookmark_from_row(row)?, row.get::<_, Option<String>>(8)?)))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>().map_err(Error::from)
+    }
+
+    /// Titles held by more than one bookmark, keeping the oldest of each.
+    ///
+    /// Returns the ids that would be removed. The oldest is kept rather than
+    /// the newest because `first_captured_at` is the closest thing this corpus
+    /// has to a real save date.
+    pub fn duplicate_title_ids(&self) -> Result<Vec<i64>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id FROM bookmarks
+              WHERE title IS NOT NULL
+                AND id NOT IN (SELECT MIN(id) FROM bookmarks WHERE title IS NOT NULL GROUP BY title)
+                AND title IN (SELECT title FROM bookmarks WHERE title IS NOT NULL
+                               GROUP BY title HAVING COUNT(*) > 1)",
+        )?;
+        let rows = statement.query_map([], |row| row.get(0))?;
+        rows.collect::<rusqlite::Result<Vec<_>>>().map_err(Error::from)
+    }
+
+    /// Deletes bookmarks by id.
+    ///
+    /// Captures, embeddings, tags, events, and fetch state cascade, so a
+    /// deleted bookmark leaves nothing behind. This is the only delete path in
+    /// the crate and it takes an explicit list — there is deliberately no
+    /// "delete everything matching a query", so a caller must have enumerated
+    /// and been able to review exactly what it is removing.
+    pub fn delete_bookmarks(&mut self, ids: &[i64]) -> Result<usize> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let transaction = self.connection.transaction()?;
+        let mut deleted = 0;
+        {
+            let mut statement = transaction.prepare("DELETE FROM bookmarks WHERE id = ?1")?;
+            for id in ids {
+                deleted += statement.execute(params![id])?;
+            }
+        }
+        transaction.commit()?;
+        Ok(deleted)
+    }
+
     /// Corpus counts, for the CLI and for sanity-checking a backfill.
     pub fn stats(&self) -> Result<Stats> {
         let scalar = |sql: &str| -> Result<i64> {
@@ -730,6 +789,67 @@ mod tests {
         let found = store.search("deterministic", 10).unwrap();
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].id, id);
+    }
+
+    #[test]
+    fn deleting_a_bookmark_takes_everything_that_hangs_off_it() {
+        let mut store = store();
+        let id = store
+            .ingest(&NewCapture::new("https://example.com/a", Source::Api))
+            .unwrap()
+            .bookmark_id();
+        store.set_metadata(id, Some("Title"), None).unwrap();
+        store.set_embedding(id, "m", &[0.5, 0.5], "hash").unwrap();
+        store.set_tags(id, &["programming".into()], "model", Some(0.9), Some("m")).unwrap();
+        store.record_event(id, "opened", None, None).unwrap();
+        store.set_fetch_state(id, "enriched", None).unwrap();
+
+        assert_eq!(store.delete_bookmarks(&[id]).unwrap(), 1);
+
+        let stats = store.stats().unwrap();
+        assert_eq!(stats.bookmarks, 0);
+        assert_eq!(stats.captures, 0, "captures should cascade");
+        assert_eq!(stats.embedded, 0, "embeddings should cascade");
+        assert_eq!(stats.events, 0, "events should cascade");
+        assert!(store.fetch_summary().unwrap().is_empty(), "fetch state should cascade");
+    }
+
+    #[test]
+    fn deleting_nothing_is_a_no_op() {
+        let mut store = store();
+        store.ingest(&NewCapture::new("https://example.com/a", Source::Api)).unwrap();
+        assert_eq!(store.delete_bookmarks(&[]).unwrap(), 0);
+        assert_eq!(store.stats().unwrap().bookmarks, 1);
+    }
+
+    #[test]
+    fn deleting_an_unknown_id_removes_nothing() {
+        let mut store = store();
+        store.ingest(&NewCapture::new("https://example.com/a", Source::Api)).unwrap();
+        assert_eq!(store.delete_bookmarks(&[999]).unwrap(), 0);
+        assert_eq!(store.stats().unwrap().bookmarks, 1);
+    }
+
+    #[test]
+    fn duplicate_titles_keep_the_oldest() {
+        let mut store = store();
+        let first =
+            store.ingest(&NewCapture::new("https://a.com/x", Source::Api)).unwrap().bookmark_id();
+        let second =
+            store.ingest(&NewCapture::new("https://b.com/y", Source::Api)).unwrap().bookmark_id();
+        store.set_metadata(first, Some("Same"), None).unwrap();
+        store.set_metadata(second, Some("Same"), None).unwrap();
+
+        assert_eq!(store.duplicate_title_ids().unwrap(), vec![second]);
+    }
+
+    #[test]
+    fn a_unique_title_is_never_a_duplicate() {
+        let mut store = store();
+        let id =
+            store.ingest(&NewCapture::new("https://a.com/x", Source::Api)).unwrap().bookmark_id();
+        store.set_metadata(id, Some("Unique"), None).unwrap();
+        assert!(store.duplicate_title_ids().unwrap().is_empty());
     }
 
     #[test]

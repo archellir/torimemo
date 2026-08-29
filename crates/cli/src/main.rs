@@ -106,6 +106,22 @@ enum Command {
     },
     /// Show tag counts across the corpus.
     Tags,
+    /// Review and remove bookmarks that are no longer worth keeping.
+    ///
+    /// Reports what it would remove and why. Nothing is deleted without
+    /// `--apply`.
+    Prune {
+        /// Categories to consider. Repeat the flag or use `all`. Omitted, only
+        /// the objective ones run: dead, walled, untitled, asset, session.
+        #[arg(long = "reason", value_name = "CATEGORY")]
+        reasons: Vec<String>,
+        /// Actually delete. Without this the command only reports.
+        #[arg(long)]
+        apply: bool,
+        /// Print every candidate rather than a few per category.
+        #[arg(long)]
+        verbose: bool,
+    },
     /// Train the local classifier on the teacher's labels.
     Train {
         /// Which labeller's output to learn from.
@@ -313,6 +329,7 @@ fn run(cli: &Cli) -> Result<()> {
             }
             Ok(())
         }
+        Command::Prune { reasons, apply, verbose } => prune(&mut store, reasons, *apply, *verbose),
         Command::Embed { batch } => {
             let provider = embedder(&cli.model)?;
             println!("embedding with {}", provider.model());
@@ -424,6 +441,118 @@ fn run(cli: &Cli) -> Result<()> {
             }
             Ok(())
         }
+    }
+}
+
+/// Reviews and optionally removes bookmarks that are no longer worth keeping.
+///
+/// Defaults to the objective categories only. The rest rest on an inference —
+/// that a job posting is filled, that a listing is sold — which is usually but
+/// not always right, so enabling them is the operator's decision.
+fn prune(store: &mut Store, reasons: &[String], apply: bool, verbose: bool) -> Result<()> {
+    let enabled = resolve_reasons(reasons)?;
+
+    let mut candidates: Vec<torimemo_core::Candidate> = store
+        .all_with_fetch_status()?
+        .into_iter()
+        .filter_map(|(bookmark, status)| {
+            let reason = torimemo_core::prune::classify(&bookmark, status.as_deref())?;
+            enabled.contains(&reason).then_some(torimemo_core::Candidate {
+                id: bookmark.id,
+                url: bookmark.canonical_url,
+                title: bookmark.title,
+                reason,
+            })
+        })
+        .collect();
+
+    // Duplicates are a property of the corpus rather than of one bookmark, so
+    // they are found by query and merged in rather than classified per row.
+    if enabled.contains(&torimemo_core::Reason::Duplicate) {
+        let already: std::collections::HashSet<i64> =
+            candidates.iter().map(|candidate| candidate.id).collect();
+        for id in store.duplicate_title_ids()? {
+            if already.contains(&id) {
+                continue;
+            }
+            if let Some(bookmark) = store.bookmark(id)? {
+                candidates.push(torimemo_core::Candidate {
+                    id,
+                    url: bookmark.canonical_url,
+                    title: bookmark.title,
+                    reason: torimemo_core::Reason::Duplicate,
+                });
+            }
+        }
+    }
+
+    let total = store.stats()?.bookmarks;
+    if candidates.is_empty() {
+        println!("nothing to prune across {total} bookmarks");
+        return Ok(());
+    }
+
+    report_candidates(&candidates, total, verbose);
+
+    if !apply {
+        println!("\nnothing was deleted. re-run with --apply to remove these.");
+        return Ok(());
+    }
+
+    let ids: Vec<i64> = candidates.iter().map(|candidate| candidate.id).collect();
+    let deleted = store.delete_bookmarks(&ids)?;
+    println!("\ndeleted {deleted}; {} bookmarks remain", store.stats()?.bookmarks);
+    Ok(())
+}
+
+/// Turns `--reason` flags into the set of enabled categories.
+fn resolve_reasons(requested: &[String]) -> Result<Vec<torimemo_core::Reason>> {
+    use torimemo_core::Reason;
+
+    if requested.is_empty() {
+        return Ok(Reason::all().iter().copied().filter(|reason| reason.is_objective()).collect());
+    }
+    if requested.iter().any(|value| value == "all") {
+        return Ok(Reason::all().to_vec());
+    }
+
+    requested
+        .iter()
+        .map(|value| {
+            Reason::parse(value).ok_or_else(|| {
+                let names: Vec<&str> = Reason::all().iter().map(|r| r.as_str()).collect();
+                Error::msg(format!("unknown category {value}; try one of: {}", names.join(", ")))
+            })
+        })
+        .collect()
+}
+
+/// Prints the candidates grouped by reason.
+fn report_candidates(candidates: &[torimemo_core::Candidate], total: i64, verbose: bool) {
+    use torimemo_core::Reason;
+
+    println!("{} of {total} bookmarks match:\n", candidates.len());
+
+    for reason in Reason::all() {
+        let matching: Vec<&torimemo_core::Candidate> =
+            candidates.iter().filter(|candidate| candidate.reason == *reason).collect();
+        if matching.is_empty() {
+            continue;
+        }
+
+        println!("{:<16} {:>5}   {}", reason.as_str(), matching.len(), reason.explanation());
+
+        // A few examples per category by default: enough to judge whether the
+        // rule is behaving, without burying the summary.
+        let shown = if verbose { matching.len() } else { 3.min(matching.len()) };
+        for candidate in &matching[..shown] {
+            let label = candidate.title.as_deref().unwrap_or(&candidate.url);
+            println!("    {}", label.chars().take(72).collect::<String>());
+        }
+        if matching.len() > shown {
+            println!("    ... and {} more", matching.len() - shown);
+        }
+        println!();
     }
 }
 

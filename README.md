@@ -46,6 +46,9 @@ torimemo label                       # tag with Haiku (needs ANTHROPIC_API_KEY)
 torimemo label --labeller rules      # keyword baseline; no key, no network
 torimemo embed                       # backfill vectors; resumable
 
+torimemo prune                       # review what is no longer worth keeping
+torimemo prune --reason all --apply  # and remove it
+
 torimemo tags                        # tag counts across the corpus
 torimemo export-training --out t.jsonl      # training set as JSON Lines
 torimemo train                       # fit the local classifier, print held-out scores
@@ -75,6 +78,40 @@ consumer is the user's own agent on the same machine.
 | `GET /bookmarks/{id}` | a bookmark and every capture of it |
 | `POST /events` | record an interaction (the ranking signal) |
 | `GET /stats` | corpus counts |
+
+## Pruning
+
+A decade of saving leaves a lot that was never worth keeping and more that
+stopped being: pages that 404, login walls that reveal nothing, postings for
+roles long filled, listings for things long sold. `prune` names those
+categories so a cull is a reviewable list of reasons rather than a judgement
+per row, and **nothing is deleted without `--apply`**.
+
+The default runs only the categories that rest on a measured fact — `dead`,
+`walled`, `untitled`, `asset`, `session`. The rest rest on an inference (that a
+posting is filled, that a listing is sold) which is usually but not always
+right, so enabling them with `--reason` is the operator's call.
+
+On a real 2,101-bookmark archive the objective rules alone matched **868**, and
+the full set **1,058** — about half, most of it unreachable or unreadable
+rather than merely uninteresting.
+
+| category | basis |
+|---|---|
+| `dead` | the server returned 404/410, or the host stopped resolving |
+| `walled` | fetched, but the page was a login wall with no metadata |
+| `untitled` | no title from any source; only a bare URL remains |
+| `asset` | a file rather than a page |
+| `session` | a login form, personal dashboard, or private-network host |
+| `dead-shortlink` | a shortener that no longer resolves |
+| `job-posting` · `shopping-listing` · `ephemeral` | expired by nature |
+| `contentless` | the title names the site, not the page |
+| `duplicate` | another bookmark has the same title; the older is kept |
+
+Rules match whole titles, never substrings: "Features" goes, "Features of
+Rust's borrow checker" stays. An earlier draft used a title-length test and
+would have deleted Carbon, Lobsters, ASCIIFlow, and Markwhen for having short
+names; a test now pins that.
 
 ## Teacher and student
 
