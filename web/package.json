@@ -1,0 +1,29 @@
+{
+  "name": "web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "build:prod": "NODE_ENV=production npm run build",
+    "analyze": "vite build --mode analyze",
+    "start": "npm run preview",
+    "docker:build": "docker build -t torimemo-web .",
+    "docker:run": "docker run -p 3000:8080 torimemo-web",
+    "docker:prod": "docker-compose -f docker-compose.prod.yml up -d",
+    "health-check": "curl -f http://localhost:3000/health || exit 1"
+  },
+  "devDependencies": {
+    "terser": "^5.43.1",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.2"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "lit": "^3.3.1",
+    "tailwindcss": "^4.1.12"
+  }
+}

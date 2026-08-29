@@ -1,0 +1,147 @@
+/* Reusable component styles */
+
+/* Cyberpunk Button */
+.cyber-btn {
+  @apply px-6 py-3 bg-transparent border border-cyan-400 text-cyan-400 font-mono;
+  @apply transition-all duration-300 uppercase tracking-wider;
+  background: linear-gradient(45deg, rgba(0, 255, 255, 0.1) 0%, transparent 50%);
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-btn:hover {
+  @apply bg-cyan-400 text-black;
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.5),
+    inset 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+.cyber-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.cyber-btn:hover:before {
+  left: 100%;
+}
+
+/* Cyberpunk Card */
+.cyber-card {
+  @apply bg-gray-900 border border-gray-700 rounded-lg p-6 relative;
+  background: 
+    linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+    rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.cyber-card:hover {
+  box-shadow: 
+    0 8px 32px rgba(0, 255, 255, 0.2),
+    inset 0 1px 0 rgba(0, 255, 255, 0.2);
+  border-color: rgba(0, 255, 255, 0.5);
+}
+
+/* Cyberpunk Input */
+.cyber-input {
+  @apply bg-black border border-gray-600 text-white px-4 py-2 rounded;
+  @apply focus:border-cyan-400 focus:outline-none transition-colors;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(20, 20, 20, 0.8) 100%);
+}
+
+.cyber-input:focus {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+}
+
+/* Cyberpunk Badge */
+.cyber-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  @apply bg-gradient-to-r from-cyan-500/20 to-blue-500/20;
+  @apply border border-cyan-400/30 text-cyan-300;
+}
+
+/* Cyberpunk Modal */
+.cyber-modal {
+  @apply fixed inset-0 z-50 flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.cyber-modal-content {
+  @apply bg-gray-900 border border-cyan-400/50 rounded-lg shadow-2xl;
+  @apply max-w-md w-full mx-4 p-6;
+  background: 
+    linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+    rgba(10, 10, 10, 0.95);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 0 50px rgba(0, 255, 255, 0.2);
+}
+
+/* Cyberpunk Dropdown */
+.cyber-dropdown {
+  @apply absolute z-10 mt-1 bg-gray-900 border border-gray-600 rounded-lg shadow-lg;
+  @apply max-h-60 overflow-auto;
+  background: 
+    linear-gradient(135deg, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+    rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.cyber-dropdown-item {
+  @apply px-4 py-2 cursor-pointer text-gray-300;
+  @apply hover:bg-cyan-400/20 hover:text-cyan-300;
+  @apply transition-colors duration-200;
+}
+
+/* Loading spinner */
+.cyber-spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-2;
+  @apply border-cyan-400 border-t-transparent;
+}
+
+/* Progress bar */
+.cyber-progress {
+  @apply w-full bg-gray-700 rounded-full h-2 overflow-hidden;
+}
+
+.cyber-progress-bar {
+  @apply h-full bg-gradient-to-r from-cyan-400 to-blue-500;
+  @apply transition-all duration-300 ease-out;
+  background: linear-gradient(90deg, #00ffff 0%, #0099cc 100%);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* Toggle switch */
+.cyber-toggle {
+  @apply relative inline-block w-12 h-6;
+}
+
+.cyber-toggle input {
+  @apply sr-only;
+}
+
+.cyber-toggle-slider {
+  @apply absolute cursor-pointer top-0 left-0 right-0 bottom-0;
+  @apply bg-gray-600 rounded-full transition-all duration-300;
+  @apply before:absolute before:content-[''] before:h-5 before:w-5;
+  @apply before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full;
+  @apply before:transition-all before:duration-300;
+}
+
+.cyber-toggle input:checked + .cyber-toggle-slider {
+  @apply bg-cyan-400;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.cyber-toggle input:checked + .cyber-toggle-slider:before {
+  @apply transform translate-x-6;
+}

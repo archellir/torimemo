@@ -1,0 +1,61 @@
+/* Neon glow effects and visual enhancements */
+
+/* Neon Glow Effects */
+.neon-cyan {
+  color: var(--cyber-primary);
+  text-shadow: var(--cyber-glow) var(--cyber-primary);
+}
+
+.neon-pink {
+  color: var(--cyber-secondary);
+  text-shadow: var(--cyber-glow) var(--cyber-secondary);
+}
+
+.neon-yellow {
+  color: var(--cyber-accent);
+  text-shadow: var(--cyber-glow) var(--cyber-accent);
+}
+
+.neon-green {
+  color: var(--cyber-success);
+  text-shadow: var(--cyber-glow) var(--cyber-success);
+}
+
+/* Hover effects */
+.glow-on-hover {
+  @apply transition-all duration-300;
+}
+
+.glow-on-hover:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+/* Fade in animation */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation */
+.pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+  }
+}
