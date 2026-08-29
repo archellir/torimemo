@@ -35,6 +35,10 @@ pub enum Outcome {
     /// interstitial, or an empty document.
     NoMetadata,
     /// The page is gone: a 404, a 410, or a host that no longer resolves.
+    ///
+    /// Deliberately narrow. A 403 is *refusal*, not absence — many retail
+    /// sites bot-check every request — so those are reported as
+    /// [`Self::NoMetadata`] instead and the bookmark survives.
     Dead(String),
     /// A transient failure — a timeout, a 5xx, a connection reset. Worth
     /// retrying on a later pass, unlike [`Self::Dead`].
@@ -84,12 +88,16 @@ impl Fetcher {
 
         let status = response.status();
         if status.is_client_error() {
-            // 429 and 408 are the client-error codes that mean "later", not
-            // "never"; the rest mean this URL will not come back.
-            return if status.as_u16() == 429 || status.as_u16() == 408 {
-                Outcome::Failed(format!("rate limited: {status}"))
-            } else {
-                Outcome::Dead(format!("HTTP {status}"))
+            // Only 404 and 410 actually mean the resource is gone. 429 and 408
+            // mean "later". 401/403 mean "refused" — and refused is common:
+            // Rolex, Tudor, Casio, and Chrono24 all answer 403 to anything
+            // without a browser fingerprint, while serving the page fine to a
+            // person. Recording those as dead would delete working bookmarks
+            // on the strength of a bot check.
+            return match status.as_u16() {
+                404 | 410 => Outcome::Dead(format!("HTTP {status}")),
+                401 | 403 => Outcome::NoMetadata,
+                _ => Outcome::Failed(format!("HTTP {status}")),
             };
         }
         if status.is_server_error() {
@@ -157,6 +165,14 @@ mod tests {
     #[test]
     fn builds_with_a_timeout() {
         assert!(Fetcher::new(Duration::from_secs(10)).is_ok());
+    }
+
+    #[test]
+    fn only_gone_statuses_count_as_dead() {
+        // The distinction that matters: 404 is gone, 403 is a bot check.
+        // Treating the second as the first deletes working bookmarks.
+        assert_eq!(Outcome::Dead("HTTP 404".into()), Outcome::Dead("HTTP 404".into()));
+        assert_ne!(Outcome::Dead("HTTP 404".into()), Outcome::NoMetadata);
     }
 
     #[test]
