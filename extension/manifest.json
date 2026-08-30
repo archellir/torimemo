@@ -4,16 +4,16 @@
   "version": "0.1.0",
   "description": "Save the current page to your local torimemo archive.",
   "permissions": [
-    "activeTab",
+    "tabs",
     "storage",
     "notifications"
   ],
   "host_permissions": [
-    "http://127.0.0.1/*"
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
   "background": {
     "service_worker": "background.js",
-    "type": "module",
     "scripts": [
       "background.js"
     ]
