@@ -370,12 +370,28 @@ fn save(state: &AppState, input: &serde_json::Value) -> ToolResult {
         capture = capture.with_context(note.to_string());
     }
 
-    let mut store = state.store.lock().map_err(|_| ToolError::internal("store lock poisoned"))?;
-    let ingested = store.ingest(&capture).map_err(|error| ToolError::invalid(error.to_string()))?;
-    let bookmark = store
-        .bookmark(ingested.bookmark_id())
-        .map_err(|error| ToolError::internal(error.to_string()))?
-        .ok_or_else(|| ToolError::internal("bookmark vanished after ingest"))?;
+    let (ingested, bookmark) = {
+        let mut store =
+            state.store.lock().map_err(|_| ToolError::internal("store lock poisoned"))?;
+        let ingested =
+            store.ingest(&capture).map_err(|error| ToolError::invalid(error.to_string()))?;
+        let bookmark = store
+            .bookmark(ingested.bookmark_id())
+            .map_err(|error| ToolError::internal(error.to_string()))?
+            .ok_or_else(|| ToolError::internal("bookmark vanished after ingest"))?;
+        (ingested, bookmark)
+    };
+
+    // A page saved from the browser has to become searchable on its own. This
+    // is the difference between the extension working and quietly saving into
+    // a hole: nothing else in the serving path embeds, so without it a saved
+    // bookmark stays invisible to recall until someone runs `torimemo embed`.
+    //
+    // Only for a new bookmark — a repeat capture already has its vector, and
+    // the text it was computed from has not changed.
+    if ingested.is_new() {
+        state.embed_in_background(ingested.bookmark_id());
+    }
 
     Ok(Json(serde_json::json!({
         "url": bookmark.canonical_url,
@@ -531,6 +547,42 @@ mod tests {
         .await;
         assert_eq!(second["created"], false);
         assert_eq!(second["saved_times"], 2);
+    }
+
+    #[tokio::test]
+    async fn a_saved_page_becomes_searchable_without_a_cli_command() {
+        // The failure this prevents: the extension saves a page, the row
+        // lands, and recall never finds it because nothing in the serving
+        // path computes a vector. `embed_now` is called directly here rather
+        // than through the spawned task, so the assertion does not race.
+        let store = Store::open_in_memory().unwrap();
+        let state = AppState::new(store, Provider::deterministic());
+        let app = router(state.clone());
+
+        app.oneshot(call(
+            "bookmarks.save",
+            serde_json::json!({ "url": "https://example.com/a", "note": "a title" }),
+        ))
+        .await
+        .unwrap();
+
+        {
+            let store = state.store.lock().unwrap();
+            assert_eq!(store.stats().unwrap().embedded, 0, "not embedded yet");
+        }
+
+        state.embed_now(1).unwrap();
+
+        let store = state.store.lock().unwrap();
+        assert_eq!(store.stats().unwrap().embedded, 1, "the save should have queued a vector");
+    }
+
+    #[tokio::test]
+    async fn embedding_a_missing_bookmark_is_not_an_error() {
+        // The background task can lose a race with a delete; that is a no-op,
+        // not a failure worth logging.
+        let state = AppState::new(Store::open_in_memory().unwrap(), Provider::deterministic());
+        assert!(state.embed_now(999).is_ok());
     }
 
     #[tokio::test]

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.arcbjorn.torimemo</string>
+
+  <!-- Absolute path: launchd runs with a minimal PATH that does not include
+       ~/.cargo/bin, so a bare `torimemo` would not resolve. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>__HOME__/.cargo/bin/torimemo</string>
+    <string>serve</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart if it dies. Without this the browser extension silently stops
+       working until the next manual start, which looks like the extension
+       being broken rather than the server being down. -->
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- Give up if it crashes in a tight loop rather than respawning forever. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/.torimemo/serve.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.torimemo/serve.log</string>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__/.torimemo</string>
+</dict>
+</plist>
