@@ -15,6 +15,7 @@ use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use torimemo_core::{Bookmark, NewCapture, Source};
 use torimemo_embed::rank_by_similarity;
+use tower_http::cors::{Any, CorsLayer};
 
 /// Builds the router.
 pub fn router(state: AppState) -> Router {
@@ -27,7 +28,24 @@ pub fn router(state: AppState) -> Router {
         .route("/recall", get(recall))
         .route("/events", post(record_event))
         .merge(crate::tools::routes())
+        .layer(cors())
         .with_state(state)
+}
+
+/// The CORS policy the browser extension needs.
+///
+/// A browser blocks a cross-origin `fetch` before it ever reaches this
+/// process, so without this the extension cannot talk to the API at all —
+/// the request fails in the browser with nothing logged server-side.
+///
+/// `Any` origin is deliberate rather than lax. Extension requests arrive with
+/// an opaque `moz-extension://` or `chrome-extension://` origin whose UUID is
+/// generated per-install, so there is no fixed value to allow-list. The real
+/// control is elsewhere: the socket binds loopback until a token exists, and
+/// once one does every tool call needs a bearer token that a web page has no
+/// way to obtain.
+fn cors() -> CorsLayer {
+    CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any)
 }
 
 /// An error rendered as JSON.

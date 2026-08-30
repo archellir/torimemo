@@ -1,0 +1,48 @@
+/* Sized to the content: a popup that resizes as it loads looks broken. */
+:root { color-scheme: light dark; }
+
+body {
+  margin: 0;
+  width: 22rem;
+  font: 13px/1.45 system-ui, -apple-system, sans-serif;
+}
+
+main { display: flex; flex-direction: column; gap: .6rem; padding: .9rem; }
+
+.status { margin: 0; font-weight: 600; }
+.status[data-state="saved"]   { color: #2d7d46; }
+.status[data-state="known"]   { color: #8a6d00; }
+.status[data-state="error"]   { color: #b3261e; }
+
+/* The page title, shown so it is obvious which page is being saved. */
+.title {
+  margin: 0;
+  opacity: .7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+textarea {
+  font: inherit;
+  padding: .4rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  resize: vertical;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: .45rem;
+  border: 0;
+  border-radius: 4px;
+  background: #2d7d46;
+  color: #fff;
+  cursor: pointer;
+}
+button:disabled { opacity: .5; cursor: default; }
+
+.quiet { font-size: 12px; opacity: .6; color: inherit; text-align: center; }

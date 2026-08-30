@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>torimemo settings</title>
+<link rel="stylesheet" href="popup.css">
+<main>
+  <label for="endpoint">Endpoint</label>
+  <input id="endpoint" type="url" spellcheck="false">
+
+  <label for="token">Bearer token</label>
+  <input id="token" type="password" spellcheck="false"
+         placeholder="leave empty if no token is issued">
+  <p class="quiet" style="text-align:left">
+    Only needed once you run <code>torimemo token issue</code>. Until then the
+    API accepts local calls without one.
+  </p>
+
+  <button id="save" type="button">Save</button>
+  <button id="test" type="button" style="background:#555">Test connection</button>
+  <p id="status" class="status"></p>
+</main>
+<script type="module" src="options.js"></script>

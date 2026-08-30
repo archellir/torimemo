@@ -26,6 +26,7 @@ core     normalize -> dedupe -> store        deterministic, no model
 embed    local ONNX vectors + cosine recall  in-process, no network
 classify the distilled tag model             trained offline, served locally
 api      HTTP surface + /v1/tools registry   serving path, loopback only
+extension  firefox + chrome, one keystroke    saves through the same registry
 enrich   page metadata + model labelling     the only crate allowed the network
 capture  telegram bot, ingest endpoints      (pending)
 ```
