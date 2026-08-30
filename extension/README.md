@@ -6,8 +6,14 @@ Chrome from one codebase.
 ## Why it exists
 
 Saving has to be cheaper than the browser's own bookmark, or the archive stays
-empty. `Ctrl+Shift+S` saves the page with its title as the note; the toolbar
-button opens a popup if you want to write a real one.
+empty. `Ctrl/Cmd+Shift+U` opens the save popup on the current page; so does
+clicking the toolbar button.
+
+There is deliberately **no background page**. Firefox would not start one here
+— `Inspect` opened nothing and no listener ever registered, with no error in
+any console — so the shortcut uses the reserved `_execute_action` command,
+which opens the popup directly and needs no background context. That also
+removes the only piece that differed between the two browsers.
 
 ## Install
 
@@ -21,8 +27,10 @@ torimemo serve
 `manifest.json`. Temporary add-ons are removed on restart; for a permanent
 install the extension has to be signed by Mozilla.
 
-**Chrome** — `chrome://extensions` → enable Developer mode → Load unpacked →
-pick this directory.
+**Chrome** — rename `manifest.chrome.json` over `manifest.json` first: Chrome
+requires a service worker and rejects `browser_specific_settings`, so the two
+browsers need different manifests. Then `chrome://extensions` → enable
+Developer mode → Load unpacked → pick this directory.
 
 ## Settings
 
