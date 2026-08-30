@@ -31,8 +31,8 @@
   "commands": {
     "save-page": {
       "suggested_key": {
-        "default": "Ctrl+Shift+S",
-        "mac": "Command+Shift+S"
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
       },
       "description": "Save the current page to torimemo"
     }
