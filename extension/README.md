@@ -6,8 +6,12 @@ Chrome from one codebase.
 ## Why it exists
 
 Saving has to be cheaper than the browser's own bookmark, or the archive stays
-empty. `Ctrl/Cmd+Shift+U` opens the save popup on the current page; so does
-clicking the toolbar button.
+empty. Click the toolbar button, type a note if you want one, press Enter.
+Shift+Enter inserts a newline for a longer note.
+
+`Ctrl/Cmd+Shift+U` is bound to the same popup, though whether Firefox
+dispatches it depends on what else claims that combination — rebind it under
+`about:addons` → gear → Manage Extension Shortcuts if it does nothing.
 
 There is deliberately **no background page**. Firefox would not start one here
 — `Inspect` opened nothing and no listener ever registered, with no error in

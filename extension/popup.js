@@ -64,10 +64,16 @@ async function submit() {
 
 save.addEventListener("click", submit);
 
-// Cmd/Ctrl+Enter submits from inside the textarea, so a note can be typed and
-// saved without reaching for the mouse.
+// Enter saves. The popup exists to make capture cost as little as possible,
+// and requiring a modifier put a second keystroke in front of every save.
+//
+// Shift+Enter still inserts a newline, so a multi-line note is possible for
+// anyone who wants one — it is just no longer the default cost.
 note.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submit();
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    submit();
+  }
 });
 
 document.getElementById("options").addEventListener("click", (event) => {
