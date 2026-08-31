@@ -53,6 +53,35 @@ export async function savePage({ url, note }) {
   return invoke("bookmarks.save", input);
 }
 
+/// Reports whether the configured endpoint and token actually work.
+///
+/// Lives here rather than in the options page so the failure cases are
+/// described once. The options page previously repeated this fetch with its
+/// own status handling, which meant a 401 could be worded two different ways
+/// depending on which screen you were looking at.
+///
+/// Returns a message and whether it is good news, rather than throwing: the
+/// caller is a diagnostic button, so a failure is the expected answer half
+/// the time.
+export async function checkConnection() {
+  const { endpoint, token } = await settings();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+  try {
+    const response = await fetch(`${endpoint}/v1/tools`, { headers });
+    if (response.status === 401) {
+      return { ok: false, message: "Reachable, but the token was rejected." };
+    }
+    if (!response.ok) {
+      return { ok: false, message: `Reachable, but returned ${response.status}.` };
+    }
+    const { tools } = await response.json();
+    return { ok: true, message: `Connected — ${tools.length} tools available.` };
+  } catch {
+    return { ok: false, message: `No response from ${endpoint}. Is torimemo serve running?` };
+  }
+}
+
 /// Looks a page up without saving, so the UI can say "already saved" before
 /// the user commits to anything.
 export async function lookUp(url) {
@@ -61,6 +90,15 @@ export async function lookUp(url) {
   } catch {
     return null;
   }
+}
+
+/// Writes a one-line status into an element, with a state the stylesheet
+/// colours. Shared because both screens report the same kinds of outcome and
+/// had identical copies of this.
+export function status(element, text, state) {
+  element.textContent = text;
+  if (state) element.dataset.state = state;
+  else delete element.dataset.state;
 }
 
 export { api, settings, DEFAULTS };

@@ -4,18 +4,14 @@
 // rather than a mistake — the count is the strongest signal the archive has
 // about what actually mattered.
 
-import { api, savePage, lookUp } from "./torimemo.js";
+import { api, savePage, lookUp, status } from "./torimemo.js";
 
-const status = document.getElementById("status");
+const statusEl = document.getElementById("status");
 const titleEl = document.getElementById("title");
 const note = document.getElementById("note");
 const save = document.getElementById("save");
 
-function show(text, state) {
-  status.textContent = text;
-  if (state) status.dataset.state = state;
-  else delete status.dataset.state;
-}
+const show = (text, state) => status(statusEl, text, state);
 
 const tabPromise = api.tabs
   .query({ active: true, currentWindow: true })
