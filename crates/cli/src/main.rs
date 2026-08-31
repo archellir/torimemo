@@ -199,6 +199,18 @@ enum Command {
         #[arg(long, default_value_t = 7645)]
         port: u16,
     },
+    /// Write a consistent snapshot of the archive.
+    ///
+    /// The notes on captures are the only part that cannot be reconstructed
+    /// from a browser export or a re-fetch, so they are what this protects.
+    Backup {
+        /// Where snapshots live. Defaults to `~/.torimemo/backups`.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// Delete the oldest snapshots, keeping this many.
+        #[arg(long, default_value_t = 10)]
+        keep: usize,
+    },
     /// Corpus counts.
     Stats,
     /// Links captured more than once, most-captured first.
@@ -474,6 +486,29 @@ fn run(cli: &Cli) -> Result<()> {
             let state = torimemo_api::AppState::new(store, provider);
             let runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(torimemo_api::serve(state, *port))
+        }
+        Command::Backup { dir, keep } => {
+            let directory = match dir {
+                Some(path) => path.clone(),
+                None => database_path(None)?
+                    .parent()
+                    .ok_or_else(|| Error::msg("the store has no parent directory"))?
+                    .join("backups"),
+            };
+            std::fs::create_dir_all(&directory)?;
+
+            let path = directory.join(Store::backup_name());
+            let bytes = store.backup_to(&path)?;
+            println!("wrote {} ({} KB)", path.display(), bytes / 1024);
+
+            // Rotate oldest-first. Without this a daily backup quietly fills
+            // the disk, and the usual response to that is to stop backing up.
+            let existing = Store::backups_in(&directory)?;
+            for stale in existing.iter().rev().skip(*keep) {
+                std::fs::remove_file(stale)?;
+                println!("removed {}", stale.display());
+            }
+            Ok(())
         }
         Command::Stats => {
             let stats = store.stats()?;

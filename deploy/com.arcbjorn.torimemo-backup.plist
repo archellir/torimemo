@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.arcbjorn.torimemo-backup</string>
+
+  <!-- Absolute path: launchd runs with a minimal PATH that excludes
+       ~/.cargo/bin, so a bare `torimemo` would not resolve. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>__HOME__/.cargo/bin/torimemo</string>
+    <string>backup</string>
+    <string>--keep</string>
+    <string>14</string>
+  </array>
+
+  <!-- Daily at 04:00. A backup nobody has to remember is the only kind that
+       survives contact with a busy week. Fourteen kept is a fortnight of
+       history at roughly 400KB each. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>4</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+
+  <!-- If the machine was asleep at 04:00, run once on wake rather than
+       skipping the day entirely. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/.torimemo/backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/.torimemo/backup.log</string>
+</dict>
+</plist>

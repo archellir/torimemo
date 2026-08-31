@@ -24,6 +24,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{Connection, Row};
 use std::path::Path;
 
+mod backup;
 mod bookmarks;
 mod embed;
 mod enrich;
